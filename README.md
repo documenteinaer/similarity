@@ -9,8 +9,6 @@ The dataset repo is located here: https://github.com/airdocs/datasets.
 
 The `utils.py` file reads and loads data from `dataset` repo.
 
-.. code-block:
-
     costincarabas@MacBook:~/facultate/doctorat/research/AirDocs$ tree -L 2
     ..
     ├── datasets
