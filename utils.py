@@ -13,9 +13,133 @@ from collections import Counter
 import datetime
 import math
 import json
+import numpy as np
 
 
 min_rssi = -100
+
+
+def get_all_APs_in_json(json_file):
+    APs = []
+    f = open(json_file)
+    data = json.load(f)
+
+    coll_no = 0
+    while 'collection'+str(coll_no) in data:
+        collection = data['collection'+str(coll_no)]
+        fingerprints = collection['fingerprints']
+
+        # Remove empty fingerprints (Location not Activated)
+        if not fingerprints:
+            coll_no += 1
+            continue
+
+        rsss = []
+        for f in fingerprints:
+            wifi = f['wifi']
+            for ap in wifi.keys():
+                APs.append(ap)
+
+        coll_no += 1
+
+    return APs
+
+def load_dataset_json(json_file):
+    collections = []
+    fingerprints = []
+    coll_no = 0
+
+    f = open(str(json_file))
+    data = json.load(f)
+
+    while 'collection'+str(coll_no) in data:
+#         print('collection'+str(coll_no))
+        fingerprint = data['collection'+str(coll_no)]['fingerprints']
+#         print(data['collection'+str(coll_no)]['devName'])
+
+        # Remove empty fingerprints (Location not Activated)
+        if not data['collection'+str(coll_no)]['fingerprints']:
+            coll_no += 1
+            continue
+
+        collections.append(data['collection'+str(coll_no)])
+        fingerprints.append(fingerprint)
+
+#         rsss = []
+#         for f in fingerprints:
+#             wifi = f['wifi']
+#             print(f['timestamp'])
+#             for ap in wifi.keys():
+#                 print(ap)
+#                 print(wifi[ap]['rssi'])
+
+
+        # No WiFi detected
+#         if not wifi:
+#             coll_no += 1
+#             continue
+#
+#         print(wifi)
+
+        # Go to next collection
+        coll_no += 1
+
+    return collections
+
+def get_wifi_from_collections(json_file, collections):
+    rss_v= []
+
+    APs = get_all_APs_in_json(json_file)
+    for c in collections:
+        rss = {}
+        for ap in APs:
+            rss[ap] = []
+            for f in c['fingerprints']:
+                if not ap in  f['wifi']:
+                    continue
+#                 rss[ap].append(f['wifi'][ap]['ssid'])
+#                 print(ap+" "+f['wifi'][ap]['ssid']+" "+f['wifi'][ap]['rssi'])
+                rss[ap].append(int(f['wifi'][ap]['rssi']))
+#                 wifi[ap].append(
+#             print(c['devName']+" "+ap+" "+str(rss[ap]))
+        rss_v.append(rss)
+    return rss_v
+
+
+def similarity_collection_vs_all(json_file, collections, index = 0, method = 'First'):
+    rss_v = get_wifi_from_collections(json_file, collections)
+    sorensen_plot = []
+
+    for r in range(len(rss_v)):
+        print("###########")
+        print("Collection " + str(index) + " rss: " + str(rss_v[index]))
+        print("Collection "+ str(r) + " rss: " + str(rss_v[r]))
+        print("###########")
+        rss_1 = []
+        rss_2 = []
+        for key in rss_v[index].keys():
+
+            # Both collections should see the AP;
+            if not rss_v[index][key] or not rss_v[r][key]:
+                continue
+
+            # Take only the first value
+            if method == 'First':
+                rss_1.append(rss_v[index][key][0])
+                rss_2.append(rss_v[r][key][0])
+
+            if method == 'Average':
+                rss_1.append(np.average(rss_v[index][key]))
+                rss_2.append(np.average(rss_v[r][key]))
+
+
+        sorensen_plot.append(braycurtis(tuple(rss_1), tuple(rss_2)))
+
+    plt.plot(sorensen_plot, 'o', label = "Sorensen")
+    plt.xlabel("Nr. crt.")
+    plt.ylabel("Similarity Measurement")
+    plt.legend()
+    plt.show()
 
 
 def load_dataset_uji():
