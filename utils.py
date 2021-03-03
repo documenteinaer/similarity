@@ -17,7 +17,50 @@ import numpy as np
 
 
 min_rssi = -100
-def get_all_APs_in_json(json_file):
+
+"""
+Takes the original json file and creates a new json file with the fingerprints array merged
+into a single json element.
+"""
+
+
+def preprocessing(json_file):
+
+    f = open(json_file)
+    data = json.load(f)
+    collections = {}
+
+#     while 'collection'+str(coll_no) in data:
+    for c in data.keys():
+        collection = data[c]
+
+        # Transform array of fingerprints into a single fingerprint
+        fingerprints = collection['fingerprints']
+        if not fingerprints:
+            continue
+        fingerprint = fingerprints[0]
+
+        for f in fingerprints:
+            for mac in f["wifi"].keys():
+                if not mac in fingerprint["wifi"]:
+                    fingerprint["wifi"][mac] = f["wifi"][mac]
+                # TODO: Check if 2 MAC address are from the same WiFi
+            for mac in f["ble"].keys():
+                if not mac in fingerprint["ble"]:
+                    fingerprint["ble"][mac] = f["ble"][mac]
+
+
+
+
+        collection["fingerprints"] = fingerprint
+        collections[c] = collection
+
+    with open('json2.json', 'w') as outfile:
+        json.dump(collections, outfile, indent = 4)
+
+
+
+def get_all_APs_in_json(json_file, whitelist = False):
     APs = []
     f = open(json_file)
     data = json.load(f)
@@ -36,15 +79,15 @@ def get_all_APs_in_json(json_file):
             continue
 
         # For every fingerprint
-        for f in fingerprints:
-            wifi = f['wifi']
+        wifi = fingerprints['wifi']
 
-            # For every MAC address
-            for ap in wifi.keys():
-
-                # WHITELIST
-                if str(ap) in whitelist_ap:
-                    APs.append(ap)
+        # For every MAC address
+        for ap in wifi.keys():
+            if not whitelist:
+                APs.append(ap)
+            # WHITELIST
+            elif str(ap) in whitelist_ap:
+                APs.append(ap)
 
         coll_no += 1
 
@@ -99,10 +142,16 @@ def get_rssi_from_collections(json_file, collections):
     return rssi_v
 
 
+""" Plot similarity (only Sorensen used). Params:
+    * index - the index in the collection array. All collection are compared with it
+    * method - the method used for rssi value. Examples:
+        * 'First'
+        * 'Average'
+"""
+
 def similarity_collection_vs_all(json_file, collections, index = 0, method = 'First'):
     rssi_v = get_rssi_from_collections(json_file, collections)
     sorensen_plot = []
-
 
     for r in range(len(rssi_v)):
         if r == index:
@@ -128,9 +177,7 @@ def similarity_collection_vs_all(json_file, collections, index = 0, method = 'Fi
                 rss_1.append(np.average(rssi_v[index][key]))
                 rss_2.append(np.average(rssi_v[r][key]))
 
-#         print(rssi_v[r])
-#         print(rssi_v[index])
-#         print(ap_comune, ap_comune/len(rssi_v[index].keys())*100, ap_comune/len(rssi_v[r].keys())*100)
+        print("AP comune = ", ap_comune)
         sorensen_plot.append(braycurtis(tuple(rss_1), tuple(rss_2)))
 
     plt.plot(sorensen_plot, 'o', label = "Sorensen")
