@@ -40,10 +40,22 @@ def preprocessing(json_file):
             continue
         fingerprint = fingerprints[0]
 
-        for f in fingerprints:
+        for i,f in enumerate(fingerprints):
+            if i==0:
+                continue
             for mac in f["wifi"].keys():
                 if not mac in fingerprint["wifi"]:
                     fingerprint["wifi"][mac] = f["wifi"][mac]
+                else:
+                    # Create an array of values
+
+                    # If rssi is a string, transform it to array
+                    if isinstance(fingerprint["wifi"][mac]["rssi"], str):
+                        fingerprint["wifi"][mac]["rssi"] = [int(f["wifi"][mac]["rssi"])]
+
+                    # If rssi is an array, add the value to array
+                    if isinstance(fingerprint["wifi"][mac]["rssi"], list):
+                        fingerprint["wifi"][mac]["rssi"].append(int(f["wifi"][mac]["rssi"]))
                 # TODO: Check if 2 MAC address are from the same WiFi
             for mac in f["ble"].keys():
                 if not mac in fingerprint["ble"]:
