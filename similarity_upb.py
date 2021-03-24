@@ -16,8 +16,11 @@ collections = load_dataset_json(json_file)
 preprocessing(json_file)
 
 
-similarity_collection_vs_all("json2.json", collections, index = 9, method = 'First')
-similarity_collection_vs_all("json2.json", collections, index = 9, method = 'Average')
+similarity_collection_vs_all(json_file, collections, index = 5, method = 'First')
+print("Locations whitin range: ", similarity_collection_vs_all(json_file, collections, index = 5, method = 'Average'))
+# similarity_collection_vs_all(json_file, collections, index = 5, method = 'Median')
+# similarity_collection_vs_all(json_file, collections, index = 5, method = 'Histogram')
+
 # 
 # print(get_rssi_from_collections(json_file,collections))
 

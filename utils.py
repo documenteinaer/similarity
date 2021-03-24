@@ -14,6 +14,7 @@ import datetime
 import math
 import json
 import numpy as np
+import scipy.stats as st
 
 
 min_rssi = -100
@@ -28,6 +29,8 @@ def preprocessing(json_file):
 
     f = open(json_file)
     data = json.load(f)
+    w = open('whitelist.json', 'r')
+    w_list = json.load(w)
     collections = {}
 
 #     while 'collection'+str(coll_no) in data:
@@ -38,47 +41,61 @@ def preprocessing(json_file):
         fingerprints = collection['fingerprints']
         if not fingerprints:
             continue
-        fingerprint = fingerprints[0]
+#         fingerprint = fingerprints[0]
+
+        fingerprint = {}
+        if 'timestamp' in fingerprints[0]:
+            fingerprint['timestamp'] = fingerprints[0]['timestamp']
+        fingerprint['wifi'] = {}
+        fingerprint['ble'] = fingerprints[0]['ble']
+        fingerprint['gps'] = fingerprints[0]['gps']
+        fingerprint['telephony'] = fingerprints[0]['telephony']
+
 
         for i,f in enumerate(fingerprints):
             if i==0:
                 continue
+            eq_mac = None
             for mac in f["wifi"].keys():
-                if not mac in fingerprint["wifi"]:
-                    fingerprint["wifi"][mac] = f["wifi"][mac]
-                else:
-                    # Create an array of values
+                for key in w_list:
+                    if mac in w_list[key]:
+                        eq_mac = key
 
-                    # If rssi is a string, transform it to array
-                    if isinstance(fingerprint["wifi"][mac]["rssi"], str):
-                        fingerprint["wifi"][mac]["rssi"] = [int(f["wifi"][mac]["rssi"])]
+                if not eq_mac:
+                    print("Lipsește", mac)
+                    continue
+                # If new MAC, add it to the collection
+                if not eq_mac in fingerprint["wifi"]:
+                    fingerprint["wifi"][eq_mac] = f["wifi"][mac]
+                else: # If existing MAC, add only the rssi value
 
-                    # If rssi is an array, add the value to array
-                    if isinstance(fingerprint["wifi"][mac]["rssi"], list):
-                        fingerprint["wifi"][mac]["rssi"].append(int(f["wifi"][mac]["rssi"]))
-                # TODO: Check if 2 MAC address are from the same WiFi
+                    # If rssi is a string, transform it to an 1 element array
+                    if isinstance(fingerprint["wifi"][eq_mac]["rssi"], str):
+                        fingerprint["wifi"][eq_mac]["rssi"] = [int(f["wifi"][mac]["rssi"])]
+
+                    # If rssi is an array, add the rssi value to array
+                    if isinstance(fingerprint["wifi"][eq_mac]["rssi"], list):
+                        fingerprint["wifi"][eq_mac]["rssi"].append(int(f["wifi"][mac]["rssi"]))
+
             for mac in f["ble"].keys():
                 if not mac in fingerprint["ble"]:
                     fingerprint["ble"][mac] = f["ble"][mac]
 
 
-
-
         collection["fingerprints"] = fingerprint
         collections[c] = collection
 
-    with open('json2.json', 'w') as outfile:
+    with open("p_"+json_file, "w+") as outfile:
         json.dump(collections, outfile, indent = 4)
-
+    outfile.close()
 
 
 def get_all_APs_in_json(json_file, whitelist = False):
     APs = []
-    f = open(json_file)
+    f = open("p_"+json_file, 'r')
     data = json.load(f)
-    w = open('whitelist.txt', 'r')
-    whitelist_ap = w.read().splitlines()
-    print("#######",whitelist_ap)
+    w = open('whitelist.json', 'r')
+    whitelist_ap = json.load(w)
 
     coll_no = 0
     while 'collection'+str(coll_no) in data:
@@ -110,12 +127,11 @@ def load_dataset_json(json_file):
     fingerprints = []
     coll_no = 0
 
-    f = open(str(json_file))
+    f = open("p_"+json_file, 'r')
     data = json.load(f)
 
     for col in data.keys():
         fingerprint = data[col]['fingerprints']
-#         print(data['collection'+str(coll_no)]['devName'])
 
         # Remove empty fingerprints (Location not Activated)
         if not data[col]['fingerprints']:
@@ -133,23 +149,35 @@ def get_rssi_from_collections(json_file, collections):
     APs = get_all_APs_in_json(json_file)
 
     for c in collections:
-
         rss = {}
         for ap in APs:
             rss[ap] = []
-            for f in c['fingerprints']:
-                if not ap in f['wifi']:
+            for f in c['fingerprints']['wifi']:
+                if not ap in f:
                     continue
-                rssi = int(f['wifi'][ap]['rssi'])
-                if rssi < 0 and rssi > -91:
-                    # Linear values
-#                       rssi = rssi - min_rssi
-#                     # Exponential values
-                    positive = rssi - min_rssi
-                    rssi = pow(positive, math.e)/pow(-min_rssi, math.e)
+                if type(c['fingerprints']['wifi'][f]['rssi']) is list:
+                    for rssi in c['fingerprints']['wifi'][f]['rssi']:
+                        if rssi < 0 and rssi > -91:
+                            # Linear values
+#                               rssi = rssi - min_rssi
+                              # Exponential values
+                              positive = rssi - min_rssi
+                              rssi = pow(positive, math.e)/pow(-min_rssi, math.e)
+                        else:
+                            rssi = 0
+                        rss[ap].append(rssi)
                 else:
-                    rssi = 0
-                rss[ap].append(rssi)
+                    rssi = c['fingerprints']['wifi'][f]['rssi']
+                    if int(rssi) < 0 and int(rssi) > -91:
+                        # Linear values
+#                           rssi = int(rssi) - min_rssi
+                          # Exponential values
+                          positive = int(rssi) - min_rssi
+                          rssi = pow(positive, math.e)/pow(-min_rssi, math.e)
+                    else:
+                        rssi = 0
+
+                    rss[ap].append(rssi)
         rssi_v.append(rss)
     return rssi_v
 
@@ -161,43 +189,70 @@ def get_rssi_from_collections(json_file, collections):
         * 'Average'
 """
 
-def similarity_collection_vs_all(json_file, collections, index = 0, method = 'First'):
+def similarity_collection_vs_all(json_file, collections, index, method = 'First'):
     rssi_v = get_rssi_from_collections(json_file, collections)
     sorensen_plot = []
+    result = []
 
     for r in range(len(rssi_v)):
         if r == index:
+            # The similarity = 0
+            sorensen_plot.append(0)
             continue
         rss_1 = []
         rss_2 = []
         ap_comune = 0
         only_1 = 0
         only_2 = 0
+
         for key in rssi_v[index].keys():
 
             # Both collections should see the AP;
             if not rssi_v[index][key] or not rssi_v[r][key]:
                 continue
 
-            ap_comune+=1
             # Take only the first value
             if method == 'First':
                 rss_1.append(rssi_v[index][key][0])
                 rss_2.append(rssi_v[r][key][0])
+#                 print("Index are " + str(len(rssi_v[index].keys())) + " iar " + str(r) + " are " + \
+#                         str(len(rssi_v[r].keys())))
 
             if method == 'Average':
                 rss_1.append(np.average(rssi_v[index][key]))
                 rss_2.append(np.average(rssi_v[r][key]))
 
-        print("AP comune = ", ap_comune)
-        sorensen_plot.append(braycurtis(tuple(rss_1), tuple(rss_2)))
+            if method == 'Median':
+                rss_1.append(np.median(rssi_v[index][key]))
+                rss_2.append(np.mean(rssi_v[r][key]))
 
+            if method == 'Histogram':
+#                 print(np.histogram(rssi_v[index][key])[0])
+#                 print(np.histogram(rssi_v[r][key])[0])
+#                 rss_1.append(np.histogram(rssi_v[index][key])[0])
+#                 rss_2.append(np.histogram(rssi_v[r][key])[0])
+                rss_1.append([st.norm.cdf(x) for x in rssi_v[index][key]])
+                rss_2.append([st.norm.cdf(x) for x in rssi_v[r][key]])
+
+
+
+#         print("Primul vector: " + str(rss_1)+ " al 2lea vector: "+ str(rss_2) + "și valoarea " + str(braycurtis(tuple(rss_1), tuple(rss_2))))
+        if not rss_1:
+            # The similarity = 1
+            sorensen_plot.append(1)
+            continue
+        sorensen_plot.append(braycurtis(tuple(rss_1), tuple(rss_2)))
+        if braycurtis(tuple(rss_1), tuple(rss_2)) < 0.1:
+            result.append(r)
+
+#     print(sorensen_plot)
     plt.plot(sorensen_plot, 'o', label = "Sorensen")
     plt.xlabel("Nr. crt.")
     plt.ylabel("Similarity Measurement")
     plt.legend()
     plt.show()
 
+    return result
 
 def load_dataset_uji():
     dev = []
