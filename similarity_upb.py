@@ -3,8 +3,12 @@
 from utils import *
 import sys
 
+
 # json_file = "25-02-2021_21-16-46.json"
 json_file = sys.argv[1]
+
+preprocessing(json_file)
+
 # Load all collections from data file
 collections = load_dataset_json(json_file)
 
@@ -13,7 +17,6 @@ collections = load_dataset_json(json_file)
 
 
 
-preprocessing(json_file)
 
 
 similarity_collection_vs_all(json_file, collections, index = 5, method = 'First')
