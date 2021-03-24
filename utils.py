@@ -211,12 +211,13 @@ def similarity_collection_vs_all(json_file, collections, index, method = 'First'
             if not rssi_v[index][key] or not rssi_v[r][key]:
                 continue
 
+            ap_comune += 1
+
+
             # Take only the first value
             if method == 'First':
                 rss_1.append(rssi_v[index][key][0])
                 rss_2.append(rssi_v[r][key][0])
-#                 print("Index are " + str(len(rssi_v[index].keys())) + " iar " + str(r) + " are " + \
-#                         str(len(rssi_v[r].keys())))
 
             if method == 'Average':
                 rss_1.append(np.average(rssi_v[index][key]))
@@ -237,10 +238,14 @@ def similarity_collection_vs_all(json_file, collections, index, method = 'First'
 
 
 #         print("Primul vector: " + str(rss_1)+ " al 2lea vector: "+ str(rss_2) + "și valoarea " + str(braycurtis(tuple(rss_1), tuple(rss_2))))
-        if not rss_1:
+        if not rss_1 or ap_comune * 10 < len(rssi_v[index].keys()):
             # The similarity = 1
             sorensen_plot.append(1)
             continue
+#         print("Index are " + str(len(rssi_v[index].keys())) + " iar " + str(r) + " are " + \
+#                     str(len(rssi_v[r].keys())), "și au ap comune " + str(ap_comune))
+        print(str(ap_comune) + " AP-uri comune din " + str(len(rssi_v[index].keys())))
+
         sorensen_plot.append(braycurtis(tuple(rss_1), tuple(rss_2)))
         if braycurtis(tuple(rss_1), tuple(rss_2)) < 0.1:
             result.append(r)
