@@ -30,3 +30,9 @@ Step1:
 
 Step2: 
     Call `compare_locations()` function from `compare_locations.py` file
+
+
+The `similarity_upb.py` script:
+    similarity_collection_vs_all(json_file, collections, index = 0, method = 'Average'))
+
+    Returns the closest neighbors that have the similarity under **0.1**.
