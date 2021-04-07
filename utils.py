@@ -15,6 +15,9 @@ import math
 import json
 import numpy as np
 import scipy.stats as st
+import random
+import cv2
+import difflib
 
 
 min_rssi = -100
@@ -47,9 +50,12 @@ def preprocessing(json_file):
         if 'timestamp' in fingerprints[0]:
             fingerprint['timestamp'] = fingerprints[0]['timestamp']
         fingerprint['wifi'] = {}
-        fingerprint['ble'] = fingerprints[0]['ble']
-        fingerprint['gps'] = fingerprints[0]['gps']
-        fingerprint['telephony'] = fingerprints[0]['telephony']
+        if 'ble' in fingerprints[0]:
+            fingerprint['ble'] = fingerprints[0]['ble']
+        if 'gps' in fingerprints[0]:
+            fingerprint['gps'] = fingerprints[0]['gps']
+        if 'telephony' in fingerprints[0]:
+            fingerprint['telephony'] = fingerprints[0]['telephony']
 
 
         for i,f in enumerate(fingerprints):
@@ -67,6 +73,7 @@ def preprocessing(json_file):
                 # If new MAC, add it to the collection
                 if not eq_mac in fingerprint["wifi"]:
                     fingerprint["wifi"][eq_mac] = f["wifi"][mac]
+                    fingerprint["wifi"][eq_mac]['rssi'] = [int(f["wifi"][mac]['rssi'])]
                 else: # If existing MAC, add only the rssi value
 
                     # If rssi is a string, transform it to an 1 element array
@@ -182,6 +189,20 @@ def get_rssi_from_collections(json_file, collections):
     return rssi_v
 
 
+def np_hist_to_cv(np_histogram_output):
+    counts, bin_edges = np_histogram_output
+    return counts.ravel().astype('float32')
+
+
+def chi2_distance(histA, histB, eps = 1e-10):
+    # compute the chi-squared distance
+    d = 0.5 * np.sum([((a - b) ** 2) / (a + b + eps)
+        for (a, b) in zip(histA, histB)])
+    # return the chi-squared distance
+    return d
+
+
+
 """ Plot similarity (only Sorensen used). Params:
     * index - the index in the collection array. All collection are compared with it
     * method - the method used for rssi value. Examples:
@@ -189,7 +210,7 @@ def get_rssi_from_collections(json_file, collections):
         * 'Average'
 """
 
-def similarity_collection_vs_all(json_file, collections, index, method = 'First'):
+def similarity_collection_vs_all(json_file, collections, index, method = 'First', label = None):
     rssi_v = get_rssi_from_collections(json_file, collections)
     sorensen_plot = []
     result = []
@@ -204,6 +225,8 @@ def similarity_collection_vs_all(json_file, collections, index, method = 'First'
         ap_comune = 0
         only_1 = 0
         only_2 = 0
+        chi = 0
+
 
         for key in rssi_v[index].keys():
 
@@ -223,35 +246,48 @@ def similarity_collection_vs_all(json_file, collections, index, method = 'First'
                 rss_1.append(np.average(rssi_v[index][key]))
                 rss_2.append(np.average(rssi_v[r][key]))
 
+            # Select random RSSI values from each AP
+            if method[:6] == 'Random':
+                no_of_random_elements = int(method[6:])
+
+                if len(rssi_v[index][key]) >= no_of_random_elements:
+                    rss_1.append(np.average(random.choices(rssi_v[index][key], k=no_of_random_elements)))
+                else:
+                    rss_1.append(np.average(rssi_v[index][key]))
+                if len(rssi_v[index][key]) >= no_of_random_elements:
+                    rss_2.append(np.average(random.choices(rssi_v[r][key], k=no_of_random_elements)))
+                else:
+                    rss_2.append(np.average(rssi_v[r][key]))
+
             if method == 'Median':
                 rss_1.append(np.median(rssi_v[index][key]))
                 rss_2.append(np.mean(rssi_v[r][key]))
 
-            if method == 'Histogram':
-#                 print(np.histogram(rssi_v[index][key])[0])
-#                 print(np.histogram(rssi_v[r][key])[0])
-#                 rss_1.append(np.histogram(rssi_v[index][key])[0])
-#                 rss_2.append(np.histogram(rssi_v[r][key])[0])
-                rss_1.append([st.norm.cdf(x) for x in rssi_v[index][key]])
-                rss_2.append([st.norm.cdf(x) for x in rssi_v[r][key]])
+            if method == 'Chi-squared':
+                chi += chi2_distance(rssi_v[index][key], rssi_v[r][key])
+
+            if method == 'Tempered':
+                rss_1.append(np.average(rssi_v[index][key]) * random.uniform(0.8, 1.2))
+                rss_2.append(np.average(rssi_v[r][key]) * random.uniform(0.8, 1.2))
 
 
-
-#         print("Primul vector: " + str(rss_1)+ " al 2lea vector: "+ str(rss_2) + "și valoarea " + str(braycurtis(tuple(rss_1), tuple(rss_2))))
-        if not rss_1 or ap_comune * 10 < len(rssi_v[index].keys()):
-            # The similarity = 1
+        if method != 'Chi-squared' and not rss_1 or ap_comune * 10 < len(rssi_v[index].keys()):
+            # If not enough common AP, similarity = 1
             sorensen_plot.append(1)
             continue
-#         print("Index are " + str(len(rssi_v[index].keys())) + " iar " + str(r) + " are " + \
-#                     str(len(rssi_v[r].keys())), "și au ap comune " + str(ap_comune))
-        print(str(ap_comune) + " AP-uri comune din " + str(len(rssi_v[index].keys())))
-
-        sorensen_plot.append(braycurtis(tuple(rss_1), tuple(rss_2)))
-        if braycurtis(tuple(rss_1), tuple(rss_2)) < 0.1:
-            result.append(r)
+        if method == 'Chi-squared':
+            sorensen_plot.append(chi)
+        else:
+            if braycurtis(tuple(rss_1), tuple(rss_2)) < 0.1:
+                result.append(r)
+            sorensen_plot.append(braycurtis(tuple(rss_1), tuple(rss_2)))
 
 #     print(sorensen_plot)
-    plt.plot(sorensen_plot, 'o', label = "Sorensen")
+    if label:
+        plt.plot(sorensen_plot, 'o', label = label)
+    else:
+        plt.plot(sorensen_plot, 'o', label = method)
+
     plt.xlabel("Nr. crt.")
     plt.ylabel("Similarity Measurement")
     plt.legend()
