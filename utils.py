@@ -134,7 +134,7 @@ def load_dataset_json(json_file):
     fingerprints = []
     coll_no = 0
 
-    f = open("p_"+json_file, 'r')
+    f = open(json_file, 'r')
     data = json.load(f)
 
     for col in data.keys():
