@@ -54,7 +54,7 @@ for c in data.keys():
             # If new MAC, add it to the collection
             if not eq_mac in fingerprint["wifi"]:
                 fingerprint["wifi"][eq_mac] = f["wifi"][mac]
-                fingerprint["wifi"][eq_mac]['rssi'] = [f["wifi"][mac]['rssi']]
+                fingerprint["wifi"][eq_mac]['rssi'] = [int(f["wifi"][mac]['rssi'])]
             else: # If existing MAC, add only the rssi value
 
                 # If rssi is a string, transform it to an 1 element array
