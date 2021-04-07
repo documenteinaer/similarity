@@ -46,16 +46,15 @@ for c in data.keys():
         eq_mac = None
         for mac in f["wifi"].keys():
             for key in w_list:
-                eq_mac = key
-#                     if mac in w_list[key]:
-#                         eq_mac = key
+                    if mac in w_list[key]:
+                        eq_mac = key
 
             if not eq_mac:
-                print("Lipsește", mac)
                 continue
             # If new MAC, add it to the collection
             if not eq_mac in fingerprint["wifi"]:
                 fingerprint["wifi"][eq_mac] = f["wifi"][mac]
+                fingerprint["wifi"][eq_mac]['rssi'] = [f["wifi"][mac]['rssi']]
             else: # If existing MAC, add only the rssi value
 
                 # If rssi is a string, transform it to an 1 element array
