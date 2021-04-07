@@ -9,6 +9,14 @@
 
 import sys
 import json
+import math
+
+
+
+def transform_rssi(rssi):
+    min_rssi = -100
+    positive = rssi - min_rssi
+    return pow(positive, math.e)/pow(-min_rssi, math.e)
 
 json_file = sys.argv[1]
 
@@ -54,16 +62,16 @@ for c in data.keys():
             # If new MAC, add it to the collection
             if not eq_mac in fingerprint["wifi"]:
                 fingerprint["wifi"][eq_mac] = f["wifi"][mac]
-                fingerprint["wifi"][eq_mac]['rssi'] = [int(f["wifi"][mac]['rssi'])]
+                fingerprint["wifi"][eq_mac]['rssi'] = [transform_rssi(int(f["wifi"][mac]['rssi']))]
             else: # If existing MAC, add only the rssi value
 
                 # If rssi is a string, transform it to an 1 element array
                 if isinstance(fingerprint["wifi"][eq_mac]["rssi"], str):
-                    fingerprint["wifi"][eq_mac]["rssi"] = [int(f["wifi"][mac]["rssi"])]
+                    fingerprint["wifi"][eq_mac]["rssi"] = [transform_rssi(int(f["wifi"][mac]["rssi"]))]
 
                 # If rssi is an array, add the rssi value to array
                 if isinstance(fingerprint["wifi"][eq_mac]["rssi"], list):
-                    fingerprint["wifi"][eq_mac]["rssi"].append(int(f["wifi"][mac]["rssi"]))
+                    fingerprint["wifi"][eq_mac]["rssi"].append(transform_rssi(int(f["wifi"][mac]["rssi"])))
 
         for mac in f["ble"].keys():
             if not mac in fingerprint["ble"]:
@@ -76,5 +84,4 @@ for c in data.keys():
 with open("p_"+json_file, "w+") as outfile:
     json.dump(collections, outfile, indent = 4)
 outfile.close()
-
 
