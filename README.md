@@ -20,3 +20,13 @@ The `utils.py` file reads and loads data from `dataset` repo.
         ├── __pycache__
         ├── similarity.py
         └── utils.py
+
+
+Step1:
+    * Requires `whitelist.txt`
+    * Outputs `p_6-redmi-17-03-2021_12-52-29.json`
+
+    `python3 preprocessing.py 6-redmi-17-03-2021_12-52-29.json`
+
+Step2: 
+    Call `compare_locations()` function from `compare_locations.py` file
