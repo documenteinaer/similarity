@@ -29,7 +29,6 @@ def compare_locations(c1, c2, method = 'Average'):
 
         # Make an average of all RSSI values
         if method == 'Average':
-            print(wifi1[ap])
             rssi1.append(np.average(wifi1[ap]['rssi']))
             rssi2.append(np.average(wifi2[ap]['rssi']))
 
