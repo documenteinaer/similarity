@@ -16,7 +16,7 @@ import json
 import numpy as np
 import scipy.stats as st
 import random
-import cv2
+#import cv2
 import difflib
 
 
@@ -99,7 +99,7 @@ def preprocessing(json_file):
 
 def get_all_APs_in_json(json_file, whitelist = False):
     APs = []
-    f = open("p_"+json_file, 'r')
+    f = open(json_file, 'r')
     data = json.load(f)
     w = open('whitelist.json', 'r')
     whitelist_ap = json.load(w)
@@ -278,7 +278,7 @@ def similarity_collection_vs_all(json_file, collections, index, method = 'First'
         if method == 'Chi-squared':
             sorensen_plot.append(chi)
         else:
-            if braycurtis(tuple(rss_1), tuple(rss_2)) < 0.1:
+            if braycurtis(tuple(rss_1), tuple(rss_2)) < 0.2:
                 result.append(r)
             sorensen_plot.append(braycurtis(tuple(rss_1), tuple(rss_2)))
 

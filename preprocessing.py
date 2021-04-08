@@ -14,6 +14,7 @@ import math
 
 
 def transform_rssi(rssi):
+    return rssi
     min_rssi = -100
     positive = rssi - min_rssi
     return pow(positive, math.e)/pow(-min_rssi, math.e)
