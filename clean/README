@@ -8,6 +8,13 @@ transform_rssi(rssi):
 
     Result:
 
+preprocessing(json_file):
+    Parameters:
+    *json_file - raw json_file
+
+    Result:
+    * Creates a file named "p_input_file" with the preprocessed collections;
+
 
 
 server_utils.py:
