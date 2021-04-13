@@ -1,0 +1,50 @@
+
+
+preprocessing.py:
+
+transform_rssi(rssi):
+    Parameters:
+    * rssi - the RSSI value of an AP from a collection;
+
+    Result:
+
+
+
+server_utils.py:
+
+load_collections(json_file):
+    Parameters:
+    * json_file - the preprocessed json file that contains the collections
+                we want to compare;
+
+    Result:
+    * Returns a list with collections(locations);
+
+
+compare_locations(c1, c2, method = 'Average')
+    Parameters:
+    * c1,c2 - collections (locations)
+    * method - Each WiFi has a list of RSSI. This is the method for aggregating
+            all RSSI into a single value. By default it performs Average.
+
+    Results:
+    * Returns a similarity number between 0 and 1. The lower the value is, the
+            closer the collections (locations) are. Usually below 0.1 means
+            that they are within 1-2 meters.
+
+
+
+server.py:
+
+Step 1: Takes the first parameter and performs a preprocessing, resulting a
+    json file named *p_input_filename* that will be used
+
+Step 2: Loads the collections into a list named *collections*.
+
+Step 3: Performs a similarity between two collections.
+
+For testing purposes, there is an *example.json* file which is
+    *2-pixel-25-02-2021_16-27-45.json* from PRECIS measurements.
+
+Example of usage:
+`python3 server.py example.json`
