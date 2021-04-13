@@ -96,14 +96,40 @@ def preprocessing(json_file):
         json.dump(collections, outfile, indent = 4)
     outfile.close()
 
+def get_all_APs_in_collections(collections):
+    APs = []
+    coll_no = 0
+    for collection in collections:
+     #   collection = data['collection'+str(coll_no)]
+        fingerprints = collection['fingerprints']
+
+        # Remove empty fingerprints (Location not Activated)
+        if not fingerprints:
+            coll_no += 1
+            continue
+
+        # For every fingerprint
+        wifi = fingerprints['wifi']
+
+        # For every MAC address
+        for ap in wifi.keys():
+                APs.append(ap)
+
+        coll_no += 1
+
+    return APs
+
+
+    
 
 def get_all_APs_in_json(json_file, whitelist = False):
     APs = []
     f = open(json_file, 'r')
     data = json.load(f)
-    w = open('whitelist.json', 'r')
-    whitelist_ap = json.load(w)
-
+    
+    #   w = open('whitelist-gigi.json', 'r')
+    #   whitelist_ap = json.load(w)
+        
     coll_no = 0
     while 'collection'+str(coll_no) in data:
         collection = data['collection'+str(coll_no)]
@@ -119,11 +145,11 @@ def get_all_APs_in_json(json_file, whitelist = False):
 
         # For every MAC address
         for ap in wifi.keys():
-            if not whitelist:
+#            if not whitelist:
                 APs.append(ap)
             # WHITELIST
-            elif str(ap) in whitelist_ap:
-                APs.append(ap)
+#           elif str(ap) in whitelist_ap:
+#                APs.append(ap)
 
         coll_no += 1
 
@@ -150,10 +176,30 @@ def load_dataset_json(json_file):
 
     return collections
 
-def get_rssi_from_collections(json_file, collections):
+# RSSI -91dBm..0 gets processed to 0-0.37 
+# adjust relative to MIN_RRSI
+# rss_in param is int or list
+# rss_out is a list
+def adjust_rssi(rssi_in): 
+    rss_out = []
+    if type(rssi_in) is int:
+        rssi_in = [rssi_in]
+    assert (type(rssi_in) is list), "RSS muste be int or list of ints"
+    
+    for rssi_val in rssi_in:
+        if rssi_val < 0 and rssi_val > -91:
+            positive = rssi_val - min_rssi
+            rssi = pow(positive, math.e)/pow(-min_rssi, math.e)
+        else:
+            rssi = 0
+        rss_out.append(rssi)
+    return rss_out        
+
+
+def get_rssi_from_collections(collections):
     rssi_v= []
 
-    APs = get_all_APs_in_json(json_file)
+    APs = get_all_APs_in_collections(collections)
 
     for c in collections:
         rss = {}
@@ -162,29 +208,24 @@ def get_rssi_from_collections(json_file, collections):
             for f in c['fingerprints']['wifi']:
                 if not ap in f:
                     continue
-                if type(c['fingerprints']['wifi'][f]['rssi']) is list:
-                    for rssi in c['fingerprints']['wifi'][f]['rssi']:
-                        if rssi < 0 and rssi > -91:
-                            # Linear values
-#                               rssi = rssi - min_rssi
-                              # Exponential values
-                              positive = rssi - min_rssi
-                              rssi = pow(positive, math.e)/pow(-min_rssi, math.e)
-                        else:
-                            rssi = 0
-                        rss[ap].append(rssi)
-                else:
-                    rssi = c['fingerprints']['wifi'][f]['rssi']
-                    if int(rssi) < 0 and int(rssi) > -91:
-                        # Linear values
-#                           rssi = int(rssi) - min_rssi
-                          # Exponential values
-                          positive = int(rssi) - min_rssi
-                          rssi = pow(positive, math.e)/pow(-min_rssi, math.e)
-                    else:
-                        rssi = 0
-
-                    rss[ap].append(rssi)
+                rss[ap] = rss[ap] + adjust_rssi(c['fingerprints']['wifi'][f]['rssi'])
+                
+                # if type(c['fingerprints']['wifi'][f]['rssi']) is list:
+                #     for rssi in c['fingerprints']['wifi'][f]['rssi']:
+                #         if rssi < 0 and rssi > -91:
+                #               positive = rssi - min_rssi
+                #               rssi = pow(positive, math.e)/pow(-min_rssi, math.e)
+                #         else:
+                #             rssi = 0
+                #         rss[ap].append(rssi)
+                # else:
+                #     rssi = c['fingerprints']['wifi'][f]['rssi']
+                #     if int(rssi) < 0 and int(rssi) > -91:
+                #           positive = int(rssi) - min_rssi
+                #           rssi = pow(positive, math.e)/pow(-min_rssi, math.e)
+                #     else:
+                #         rssi = 0
+                #     rss[ap].append(rssi)
         rssi_v.append(rss)
     return rssi_v
 
@@ -210,8 +251,8 @@ def chi2_distance(histA, histB, eps = 1e-10):
         * 'Average'
 """
 
-def similarity_collection_vs_all(json_file, collections, index, method = 'First', label = None):
-    rssi_v = get_rssi_from_collections(json_file, collections)
+def similarity_collection_vs_all(collections, index, method = 'First', label = None):
+    rssi_v = get_rssi_from_collections(collections)
     sorensen_plot = []
     result = []
 
@@ -278,9 +319,10 @@ def similarity_collection_vs_all(json_file, collections, index, method = 'First'
         if method == 'Chi-squared':
             sorensen_plot.append(chi)
         else:
-            if braycurtis(tuple(rss_1), tuple(rss_2)) < 0.2:
-                result.append(r)
-            sorensen_plot.append(braycurtis(tuple(rss_1), tuple(rss_2)))
+            sim = braycurtis(tuple(rss_1), tuple(rss_2))
+            sorensen_plot.append(sim)
+            result.append([r,sim])
+
 
 #     print(sorensen_plot)
     if label:
@@ -437,3 +479,13 @@ def get_common_APs(loc1, loc2):
             APs_in_2.append(loc2[3][i])
 
     return [APs_in_1, APs_in_2]
+
+
+# computes smallest absolute difference between a and b in modulo m
+# 
+def diff_modulo(a,b,m):
+    assert((a >= 0) and (a < m))
+    assert((b >= 0) and (b < m))
+    return min((a - b + m) % m, (b - a + m) % m)
+
+

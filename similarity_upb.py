@@ -34,8 +34,12 @@ collections2 = load_dataset_json(json_file_2)
 #             index = 5, method = 'Random'+str(i), label = "Random "+str(i)+" RSSI from each AP"))
 # 
 
-print("Locations whitin range: ", similarity_collection_vs_all(json_file_1, collections1,
-             index = 5, method = 'Average'))
+#print("Locations whitin range: ", similarity_collection_vs_all(json_file_1, collections1,
+#             index = 5, method = 'Average'))
+
+
+print(get_rssi_from_collections(collections1))
+
 # 
 # print("Locations whitin range: ", similarity_collection_vs_all(json_file, collections,
 #             index = 5, method = 'Tempered'))

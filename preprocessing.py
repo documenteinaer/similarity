@@ -19,11 +19,17 @@ def transform_rssi(rssi):
     positive = rssi - min_rssi
     return pow(positive, math.e)/pow(-min_rssi, math.e)
 
-json_file = sys.argv[1]
-
+if len(sys.argv) != 3:
+    print(sys.argv[0], " whitelist.json inputfile.json")
+    print("Produces p_inputfile.json")
+    sys.exit(1)
+    
+json_file = sys.argv[2]
+wl_file = sys.argv[1]
+    
 f = open(json_file)
 data = json.load(f)
-w = open('whitelist.json', 'r')
+w = open(wl_file, 'r')
 w_list = json.load(w)
 collections = {}
 

@@ -2,7 +2,7 @@
 
 import numpy as np
 from scipy.spatial.distance import braycurtis
-
+from utils import * 
 
 def compare_locations(c1, c2, method = 'Average'):
     rssi1 = []
@@ -29,7 +29,6 @@ def compare_locations(c1, c2, method = 'Average'):
 
         # Make an average of all RSSI values
         if method == 'Average':
-            rssi1.append(np.average(wifi1[ap]['rssi']))
-            rssi2.append(np.average(wifi2[ap]['rssi']))
-
+            rssi1.append(np.average(adjust_rssi(wifi1[ap]['rssi'])))
+            rssi2.append(np.average(adjust_rssi(wifi2[ap]['rssi'])))
     return braycurtis(tuple(rssi1), tuple(rssi2))
