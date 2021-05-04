@@ -15,12 +15,12 @@ import math
 
 def transform_rssi(rssi):
     return rssi
-    min_rssi = -100
-    positive = rssi - min_rssi
-    return pow(positive, math.e)/pow(-min_rssi, math.e)
+#     min_rssi = -100
+#     positive = rssi - min_rssi
+#     return pow(positive, math.e)/pow(-min_rssi, math.e)
 
-if len(sys.argv) != 3:
-    print(sys.argv[0], " whitelist.json inputfile.json")
+if len(sys.argv) < 3 or len(sys.argv) > 4:
+    print(sys.argv[0], " whitelist.json inputfile.json [orientation N/S/E/V]")
     print("Produces p_inputfile.json")
     sys.exit(1)
     
@@ -56,8 +56,9 @@ for c in data.keys():
 
 
     for i,f in enumerate(fingerprints):
-        if i==0:
-            continue
+        if len(sys.argv) == 4:
+            if i > int(sys.argv[3]):
+                continue
         eq_mac = None
         for mac in f["wifi"].keys():
             for key in w_list:
@@ -88,7 +89,12 @@ for c in data.keys():
     collection["fingerprints"] = fingerprint
     collections[c] = collection
 
-with open("p_"+json_file, "w+") as outfile:
-    json.dump(collections, outfile, indent = 4)
+if len(sys.argv) == 4:
+    with open("p"+sys.argv[3]+"_"+json_file, "w+") as outfile:
+        json.dump(collections, outfile, indent = 4)
+else:
+    with open("p_"+json_file, "w+") as outfile:
+        json.dump(collections, outfile, indent = 4)
+
 outfile.close()
 

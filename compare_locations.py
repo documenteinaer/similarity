@@ -4,7 +4,7 @@ import numpy as np
 from scipy.spatial.distance import braycurtis
 from utils import * 
 
-def compare_locations(c1, c2, method = 'Average'):
+def compare_locations(c1, c2, simil_method = braycurtis,  method = 'Average'):
     rssi1 = []
     rssi2 = []
     wifi1 = c1['fingerprints']['wifi']
@@ -18,7 +18,7 @@ def compare_locations(c1, c2, method = 'Average'):
 
     # TODO: find the best metric
     # If not enough common APs -> similarity = 1
-    if len(common_aps) * 10 < len(wifi1.keys()):
+    if len(common_aps) * 10 < len(wifi1.keys()) or len(common_aps) < 3:
         return 1
 
     for ap in common_aps:
@@ -31,4 +31,10 @@ def compare_locations(c1, c2, method = 'Average'):
         if method == 'Average':
             rssi1.append(np.average(adjust_rssi(wifi1[ap]['rssi'])))
             rssi2.append(np.average(adjust_rssi(wifi2[ap]['rssi'])))
-    return braycurtis(tuple(rssi1), tuple(rssi2))
+
+        if method == 'Tempered':
+            rss_1.append(np.average(rssi_v[index][key]) * random.uniform(0.8, 1.2))
+            rss_2.append(np.average(rssi_v[r][key]) * random.uniform(0.8, 1.2))
+
+
+    return simil_method(tuple(rssi1), tuple(rssi2))
