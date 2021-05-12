@@ -185,7 +185,7 @@ def adjust_rssi(rssi_in):
     if type(rssi_in) is int:
         rssi_in = [rssi_in]
     assert (type(rssi_in) is list), "RSS muste be int or list of ints"
-    
+
     for rssi_val in rssi_in:
         if rssi_val < 0 and rssi_val > -91:
             positive = rssi_val - min_rssi
@@ -193,7 +193,7 @@ def adjust_rssi(rssi_in):
         else:
             rssi = 0
         rss_out.append(rssi)
-    return rss_out        
+    return rss_out
 
 
 def get_rssi_from_collections(collections):
