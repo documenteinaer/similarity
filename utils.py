@@ -16,7 +16,7 @@ import json
 import numpy as np
 import scipy.stats as st
 import random
-#import cv2
+import pyproj 
 import difflib
 
 
@@ -487,5 +487,15 @@ def diff_modulo(a,b,m):
     assert((a >= 0) and (a < m))
     assert((b >= 0) and (b < m))
     return min((a - b + m) % m, (b - a + m) % m)
+
+
+transformer = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:4978") 
+
+def ecef_to_laloal(x, y, z): # returns latitude longitude altitude (meters) 
+    return transformer.transform(x, y, z, direction='INVERSE')
+
+
+def laloal_to_ecef(lat, lon, alt): # returns x y z (meters)
+    return transformer.transform(lat, lon, alt)
 
 

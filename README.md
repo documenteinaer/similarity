@@ -9,24 +9,30 @@ The dataset repo is located here: https://github.com/airdocs/datasets.
 
 The `utils.py` file reads and loads data from `dataset` repo.
 
-    costincarabas@MacBook:~/facultate/doctorat/research/AirDocs$ tree -L 2
-    ..
-    ├── datasets
-    │   ├── DISTRIBUTED_OPENSOURCE_version2
-    │   ├── README.md
-    │   └── UJI_LIB_DB_v2.2
-    └── similarity
-        ├── README.md
-        ├── __pycache__
-        ├── similarity.py
-        └── utils.py
+Example scripts:
+
+   
 
 
-Step1:
-    * Requires `whitelist.txt`
-    * Outputs `p_6-redmi-17-03-2021_12-52-29.json`
+example scripts:
+    * dist-lat-lon.py - ecef <=> gps transformations and distances 
+    * test_pyproj.py - pyproj library test 
 
-    `python3 preprocessing.py 6-redmi-17-03-2021_12-52-29.json`
+preprocessing.py: 
+    * visualize collections 
+      ` cat 2-pixel-25-02-2021_16-27-45.json | egrep "(collect|finger|wifi|gps)" `
+    * apply wifi whitelist 
+      ` ./preprocessing.py -i ./2-pixel-25-02-2021_16-27-45.json -wwl ./precis_wl.json -o ./2-pixel`
+    * select only first direction 
+       `./preprocessing.py -i ./2-pixel -o ./2.0-pixel  -cf 0`
+    * select all directions 
+       `./preprocessing.py -i ./2-pixel-25-02-2021_16-27-45.json -o ./2cf4  -cf 0 1 2 3`
+    * generate a generic whitelist to be adjusted by hand 
+      ` ./preprocessing.py -i ./2-pixel-25-02-2021_16-27-45.json -gwl -o ./wl.json `
+     *  see APs present ONLY in the first file:
+       `./preprocessing.py -i ./2-pixel-25-02-2021_16-27-45.json -diff ./2cf4  -o 2.diff.json`	
+
+
 
 Step2: 
     Call `compare_locations()` function from `compare_locations.py` file
