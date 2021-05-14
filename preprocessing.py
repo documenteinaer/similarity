@@ -205,7 +205,33 @@ def col_diff(data, data2):
         
 
     return collections 
-    
+
+
+def interp(data):
+    out = {}
+    prevx = 0.0 
+    prevy = 0.0 
+    prevz = 0.0 
+    cols = []
+    for c in data.keys():
+        if "x" in data[c]:
+            if (math.fabs(data[c]["x"]) < 0.001) and (math.fabs(data[c]["y"]) < 0.001):
+                cols.append(data[c])
+            else:
+                n = 1
+                for sc in cols:
+                    sc["x"] = prevx + (float(data[c]["x"]) - prevx)*n/(1.0+len(cols))
+                    sc["y"] = prevy + (float(data[c]["y"]) - prevy)*n/(1.0+len(cols))
+                    sc["z"] = prevz # only works on the same floor
+                    assert math.fabs(prevz - float(data[c]["z"])) < 0.001
+                    n = n + 1
+                cols = []
+                prevx = data[c]["x"]
+                prevy = data[c]["y"]
+                prevz = data[c]["z"]
+        out[c] = data[c]
+    return out 
+ 
 
 
 
@@ -224,7 +250,9 @@ elif args.cf != None:
     collections = combine_fp(data, args.cf)
 elif args.inputfile2 != None:
     data2 = json.load(open(args.inputfile2))
-    collections = col_diff(data, data2) 
+    collections = col_diff(data, data2)
+elif args.interp:
+    collections = interp(data) 
 else:
     collections = data # unchanged 
 
