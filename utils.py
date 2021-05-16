@@ -164,6 +164,8 @@ def load_dataset_json(json_file):
     data = json.load(f)
 
     for col in data.keys():
+        if 'fingerprints' not in data[col]:
+            continue 
         fingerprint = data[col]['fingerprints']
 
         # Remove empty fingerprints (Location not Activated)
@@ -172,24 +174,31 @@ def load_dataset_json(json_file):
 
         collections.append(data[col])
         fingerprints.append(fingerprint)
-
-
     return collections
 
-# RSSI -91dBm..0 gets processed to 0-0.37 
-# adjust relative to MIN_RRSI
+
+# powed like in Sospedra Comprehensive, but scaled so that -100dBm=0 -30dBm=1
+adjust_rssi_params = -100, math.e, 2.63
+
+# more penalty for low dBm
+#adjust_rssi_params = -100, 2.0*math.e, 6.95
+
+#less penalty for high dBm
+#adjust_rssi_params = -100, 0.7*math.e, 1.97
+
 # rss_in param is int or list
 # rss_out is a list
 def adjust_rssi(rssi_in): 
+    min_rssi, exponent, scaler = adjust_rssi_params  
     rss_out = []
     if type(rssi_in) is int:
         rssi_in = [rssi_in]
-    assert (type(rssi_in) is list), "RSS muste be int or list of ints"
+    assert (type(rssi_in) is list), "RSS must be int or list of ints"
 
     for rssi_val in rssi_in:
-        if rssi_val < 0 and rssi_val > -91:
+        if rssi_val < 0 and rssi_val > min_rssi:
             positive = rssi_val - min_rssi
-            rssi = pow(positive, math.e)/pow(-min_rssi, math.e)
+            rssi = scaler * pow(-positive/min_rssi, exponent)
         else:
             rssi = 0
         rss_out.append(rssi)

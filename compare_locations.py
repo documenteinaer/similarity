@@ -8,8 +8,8 @@ def compare_locations(c1, c2, simil_method = braycurtis,  method = 'Average'):
     rssi1 = []
     rssi2 = []
     w = [] #weight for braycurtis
-    wifi1 = c1['fingerprints']['wifi']
-    wifi2 = c2['fingerprints']['wifi']
+    wifi1 = c1['fingerprints'][0]['wifi']
+    wifi2 = c2['fingerprints'][0]['wifi']
 
     common_aps = list(set(wifi1.keys()) & set(wifi2.keys()))
 
