@@ -190,10 +190,10 @@ adjust_rssi_params = -100, math.e, 2.63
 # rss_out is a list
 def adjust_rssi(rssi_in): 
     min_rssi, exponent, scaler = adjust_rssi_params  
-    rss_out = []
+    rss_out = np.array([])
     if type(rssi_in) is int:
-        rssi_in = [rssi_in]
-    assert (type(rssi_in) is list), "RSS must be int or list of ints"
+        rssi_in = np.array([rssi_in])
+    rssi_in = np.array(rssi_in)
 
     for rssi_val in rssi_in:
         if rssi_val < 0 and rssi_val > min_rssi:
@@ -201,7 +201,7 @@ def adjust_rssi(rssi_in):
             rssi = scaler * pow(-positive/min_rssi, exponent)
         else:
             rssi = 0
-        rss_out.append(rssi)
+        rss_out = np.append(rss_out, rssi)
     return rss_out
 
 
