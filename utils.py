@@ -18,7 +18,7 @@ import scipy.stats as st
 import random
 import pyproj 
 import difflib
-
+import gzip
 
 min_rssi = -100
 
@@ -160,7 +160,11 @@ def load_dataset_json(json_file):
     fingerprints = []
     coll_no = 0
 
-    f = open(json_file, 'r')
+    if json_file.lower().endswith(('.gz')):
+        f=gzip.open(json_file,'rb')
+    else:
+        f = open(json_file, 'r')
+        
     data = json.load(f)
 
     for col in data.keys():
