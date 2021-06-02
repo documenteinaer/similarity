@@ -43,7 +43,6 @@ for fingerprints that dont have using the ones that do. Assumes straight lines a
 
 
     args = parser.parse_args()
-    print(args)
 
     #for x, value in args._get_kwargs():
     #    print(x,"=", value)
@@ -239,7 +238,6 @@ def interp(data):
 def split_by_floors(data):
     floors = []
     output_file_basename = os.path.basename(args.outputfile)
-    print(output_file_basename)
 
     for c in data.keys():
         if "z" in data[c] and data[c]["z"] not in floors:
@@ -247,7 +245,6 @@ def split_by_floors(data):
 
     collections = [None] * len(floors)
     for z in floors:
-        print(floors.index(z))
         collection = {}
         i = 0
         for c in data.keys():
@@ -258,7 +255,6 @@ def split_by_floors(data):
         collections[floors.index(z)] = collection
 
     for z in floors:
-        print(c)
         with open(str(z)+args.outputfile, "w+") as outfile:
             if "proc" not in collections: # add a processing log 
                 collections[floors.index(z)]["proc"] = {}
@@ -283,7 +279,6 @@ elif args.w_whitelistfile != None:
 elif args.cf != None:
     collections = combine_fp(data, args.cf)
 elif args.floor != None:
-    print("Split by floor")
     split_by_floors(data)
 elif args.inputfile2 != None:
     data2 = json.load(open(args.inputfile2))
