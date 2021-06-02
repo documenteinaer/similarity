@@ -12,6 +12,7 @@ import sys, argparse, datetime
 import json
 import math
 import utils 
+import os
 
 inputfile = ''
 outputfile = ''
@@ -38,12 +39,15 @@ rssi values are sorted;\
     parser.add_argument('-ecef2gps', action='store_true', help='x,y,z, -> lat,long,ele')
     parser.add_argument('-interp', action='store_true', help='generates locations(gps&ecef) \
 for fingerprints that dont have using the ones that do. Assumes straight lines and equidistance')
+    parser.add_argument('--floor', action='store_true',  help='Break input file by floors')
+
 
     args = parser.parse_args()
+    print(args)
 
     #for x, value in args._get_kwargs():
     #    print(x,"=", value)
-    return args        
+    return args
 
 
 args = parse_opt()
@@ -97,14 +101,14 @@ def combine_fp(data, combine):
                     lf = [f["wifi"][mac]['rssi']]
                 if isinstance(f["wifi"][mac]["rssi"], list):
                     lf.extend(f["wifi"][mac]['rssi'])
-                        
+
                 if not mac in fingerprint["wifi"]:
                     fingerprint["wifi"][mac] = f["wifi"][mac]
                     fingerprint["wifi"][mac]['rssi'] = []
-                    
+
                 fingerprint["wifi"][mac]['rssi'].extend(lf)
                 fingerprint["wifi"][mac]['rssi'].sort()
-                
+
             for mac in f["ble"].keys():
                 if not mac in fingerprint["ble"]:
                     fingerprint["ble"][mac] = f["ble"][mac]
@@ -125,7 +129,7 @@ def apply_wl(data, w_list):
         fingerprints = collection['fingerprints']
         if not fingerprints:
             continue
-        
+
         collection["fingerprints"] = []
         for nf,f in enumerate(fingerprints):
             fingerprint = {}
@@ -138,7 +142,7 @@ def apply_wl(data, w_list):
                 fingerprint['gps'] = f['gps']
             if 'telephony' in f:
                 fingerprint['telephony'] = f['telephony']
-            
+
             eq_mac = None
             for mac in f["wifi"].keys():
                 if len(w_list) == 0: # no white list, therefore accept all 
@@ -172,8 +176,8 @@ def apply_wl(data, w_list):
                     fingerprint["ble"][mac] = f["ble"][mac]
 
             collection["fingerprints"].append(fingerprint)
-            
-        collections[c] = collection 
+
+        collections[c] = collection
     return collections 
 
 
@@ -187,7 +191,7 @@ def generate_whitelist(data):
             for mac in f["wifi"].keys():
                 if not mac in collections.keys():
                     collections[mac]=[mac, f["wifi"][mac]["ssid"], f["wifi"][mac]["frequency"]]
-    return collections 
+    return collections
 
 def col_diff(data, data2):
     collections = {}
@@ -202,7 +206,7 @@ def col_diff(data, data2):
                             break
                         if not found:
                             collections[mac]=[f["wifi"][mac]["ssid"], f["wifi"][mac]["frequency"], c]
-        
+
 
     return collections 
 
@@ -230,8 +234,38 @@ def interp(data):
                 prevy = data[c]["y"]
                 prevz = data[c]["z"]
         out[c] = data[c]
-    return out 
- 
+    return out
+
+def split_by_floors(data):
+    floors = []
+    output_file_basename = os.path.basename(args.outputfile)
+    print(output_file_basename)
+
+    for c in data.keys():
+        if "z" in data[c] and data[c]["z"] not in floors:
+            floors.append(data[c]["z"])
+
+    collections = [None] * len(floors)
+    for z in floors:
+        print(floors.index(z))
+        collection = {}
+        i = 0
+        for c in data.keys():
+            if "z" in data[c] and z == data[c]["z"]:
+                collection["collection"+str(i)] = data[c]
+                i += 1
+
+        collections[floors.index(z)] = collection
+
+    for z in floors:
+        print(c)
+        with open(str(z)+args.outputfile, "w+") as outfile:
+            if "proc" not in collections: # add a processing log 
+                collections[floors.index(z)]["proc"] = {}
+            collections[floors.index(z)]["proc"][str(datetime.datetime.now())] = ' '.join(sys.argv)
+
+            json.dump(collections[floors.index(z)], outfile, indent = 4)
+            outfile.close()
 
 
 
@@ -248,6 +282,9 @@ elif args.w_whitelistfile != None:
     collections = apply_wl(data, w_list)        
 elif args.cf != None:
     collections = combine_fp(data, args.cf)
+elif args.floor != None:
+    print("Split by floor")
+    split_by_floors(data)
 elif args.inputfile2 != None:
     data2 = json.load(open(args.inputfile2))
     collections = col_diff(data, data2)
@@ -256,12 +293,12 @@ elif args.interp:
 else:
     collections = data # unchanged 
 
+if args.floor == None:
+    with open(args.outputfile, "w+") as outfile:
+        if "proc" not in collections: # add a processing log 
+            collections["proc"] = {}
+        collections["proc"][str(datetime.datetime.now())] = ' '.join(sys.argv)
 
-with open(args.outputfile, "w+") as outfile:
-    if "proc" not in collections: # add a processing log 
-        collections["proc"] = {}
-    collections["proc"][str(datetime.datetime.now())] = ' '.join(sys.argv)
-
-    json.dump(collections, outfile, indent = 4)
-    outfile.close()
+        json.dump(collections, outfile, indent = 4)
+        outfile.close()
 
