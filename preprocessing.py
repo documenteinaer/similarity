@@ -9,6 +9,8 @@
 """
 
 import sys, argparse, datetime
+import string
+import random
 import json
 import math
 import utils 
@@ -28,8 +30,12 @@ def parse_opt():
     parser.add_argument('-bwl', action='store', dest='b_whitelistfile', help='BLE whitelist' )
     parser.add_argument('-gwl', action='store_true', help='generates a plain whitelist, \
 each mac has itself in the list; uses -o argument for output' )
-    parser.add_argument('-diff', action='store', dest='inputfile2', help='INPUTFILE-INPUTFILE2, \
+    parser.add_argument('-printxyz', action='store_true', help='generates a ssv file with, \
+cordinates (meters and pixels); uses -o argument for output' )
+    parser.add_argument('-diff', action='store', dest='dinputfile2', help='INPUTFILE-INPUTFILE2, \
 wifi MACs only in INPUTFILE')
+    parser.add_argument('-concat', action='store', dest='cinputfile2', help='INPUTFILE+INPUTFILE2, \
+merges all points(collections) into one dict')
     parser.add_argument('-cf', nargs='+', type=int, help='combine fingerprints:\
 [-1] means no combining; \
 0 means first fingerprint in each collection;\
@@ -39,6 +45,7 @@ rssi values are sorted;\
     parser.add_argument('-ecef2gps', action='store_true', help='x,y,z, -> lat,long,ele')
     parser.add_argument('-interp', action='store_true', help='generates locations(gps&ecef) \
 for fingerprints that dont have using the ones that do. Assumes straight lines and equidistance')
+    parser.add_argument('-interpval', action='store', dest='interpval', default=-1.0, help='which value is used as a placeholder, default -1' )
     parser.add_argument('--floor', action='store_true',  help='Break input file by floors')
 
 
@@ -180,6 +187,14 @@ def apply_wl(data, w_list):
     return collections 
 
 
+def printxyz(data, outfilename):
+    with open(outfilename, "w+") as outfile:
+        outfile.write("# x_p y_p x y z\n")
+        for cn, c in data.items():
+            if "x" in c.keys():
+                outfile.write(f"{c['x_p']} {c['x_p']} {c['x']} {c['y']} {c['z']} #{cn}\n")
+            
+        
 
 def generate_whitelist(data):
     collections = {}
@@ -190,6 +205,18 @@ def generate_whitelist(data):
             for mac in f["wifi"].keys():
                 if not mac in collections.keys():
                     collections[mac]=[mac, f["wifi"][mac]["ssid"], f["wifi"][mac]["frequency"]]
+    return collections
+
+def col_concat(data, data2):
+    collections = data
+    for c in data.keys():
+        if c in data2.keys():
+            if c != "proc":
+                print(f"warning: overwriting key {c} with value from{args.cinputfile2}")
+            else:
+                collections["proc"].update(data2["proc"])
+                data2.pop("proc")
+    collections.update(data2)        
     return collections
 
 def col_diff(data, data2):
@@ -215,24 +242,34 @@ def interp(data):
     prevx = 0.0 
     prevy = 0.0 
     prevz = 0.0 
+    prevxp = 0.0 
+    prevyp = 0.0 
     cols = []
+    newlabel = ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k = 3))
     for c in data.keys():
         if "x" in data[c]:
-            if (math.fabs(data[c]["x"]) < 0.001) and (math.fabs(data[c]["y"]) < 0.001):
+            if (math.fabs(float(data[c]["x"]) - args.interpval) < 0.001) and \
+               (math.fabs(float(data[c]["y"]) - args.interpval) < 0.001):
                 cols.append(data[c])
             else:
                 n = 1
                 for sc in cols:
-                    sc["x"] = prevx + (float(data[c]["x"]) - prevx)*n/(1.0+len(cols))
-                    sc["y"] = prevy + (float(data[c]["y"]) - prevy)*n/(1.0+len(cols))
-                    sc["z"] = prevz # only works on the same floor
+                    sc["x"] = float('%.3f' % (prevx + (float(data[c]["x"]) - prevx)*n/(1.0+len(cols))))
+                    sc["y"] = float('%.3f' % (prevy + (float(data[c]["y"]) - prevy)*n/(1.0+len(cols))))
+                    sc["z"] = float('%.3f' % (prevz)) # only works on the same floor
+                    sc["x_p"] = int(prevxp + (float(data[c]["x_p"]) - prevxp)*n/(1.0+len(cols)))
+                    sc["y_p"] = int(prevyp + (float(data[c]["y_p"]) - prevyp)*n/(1.0+len(cols)))
+
                     assert math.fabs(prevz - float(data[c]["z"])) < 0.001
                     n = n + 1
                 cols = []
                 prevx = data[c]["x"]
                 prevy = data[c]["y"]
                 prevz = data[c]["z"]
-        out[c] = data[c]
+                prevxp = data[c]["x_p"]
+                prevyp = data[c]["y_p"]
+                
+        out[c + "_" + newlabel] = data[c]
     return out
 
 def split_by_floors(data):
@@ -271,24 +308,32 @@ One action at a time: gwl, whitelist+merge, combine fingerprints
 """
 data = json.load(open(args.inputfile))
 
-if args.gwl:
+
+
+if args.printxyz:
+    printxyz(data, args.outputfile)
+    exit(0)
+elif args.gwl:
     collections = generate_whitelist(data)
 elif args.w_whitelistfile != None:
     w_list = json.load(open(args.w_whitelistfile, 'r'))
     collections = apply_wl(data, w_list)        
 elif args.cf != None:
     collections = combine_fp(data, args.cf)
-elif args.floor != None:
+elif args.floor:
     split_by_floors(data)
-elif args.inputfile2 != None:
-    data2 = json.load(open(args.inputfile2))
+elif args.dinputfile2 != None:
+    data2 = json.load(open(args.dinputfile2))
     collections = col_diff(data, data2)
+elif args.cinputfile2 != None:
+    data2 = json.load(open(args.cinputfile2))
+    collections = col_concat(data, data2)
 elif args.interp:
     collections = interp(data) 
 else:
     collections = data # unchanged 
 
-if args.floor == None:
+if not args.floor:
     with open(args.outputfile, "w+") as outfile:
         if "proc" not in collections: # add a processing log 
             collections["proc"] = {}

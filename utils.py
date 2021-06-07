@@ -493,6 +493,16 @@ def get_common_APs(loc1, loc2):
 
     return [APs_in_1, APs_in_2]
 
+#python sets are faster than dicts 
+def set_of_aps_col(c):
+    #aps = set([])
+    #for f in c['fingerprints']:
+    #    aps = aps.union(set(f['wifi'].keys()))
+    return set().union(*(f['wifi'].keys() for f in c['fingerprints']))
+
+def set_of_aps_floor(e):
+    return set().union(* (set_of_aps_col(c) for c in e))
+    
 
 # computes smallest absolute difference between a and b in modulo m
 # 
