@@ -195,10 +195,10 @@ adjust_rssi_params = -100, math.e, 2.63
 def adjust_rssi(rssi_in): 
     min_rssi, exponent, scaler = adjust_rssi_params  
     rss_out = np.array([])
-    if type(rssi_in) is int:
+    if (type(rssi_in) is int) or (type(rssi_in) is float) or (type(rssi_in) is np.float64):
         rssi_in = np.array([rssi_in])
-    rssi_in = np.array(rssi_in)
-
+    if type(rssi_in) is list:    
+        rssi_in = np.array(rssi_in)
     for rssi_val in rssi_in:
         if rssi_val < 0 and rssi_val > min_rssi:
             positive = rssi_val - min_rssi
