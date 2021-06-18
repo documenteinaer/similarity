@@ -191,8 +191,10 @@ def printxyz(data, outfilename):
     with open(outfilename, "w+") as outfile:
         outfile.write("# x_p y_p x y z\n")
         for cn, c in data.items():
+            if "x_p" in c.keys():
+                outfile.write(f"{c['x_p']} {c['x_p']} ")
             if "x" in c.keys():
-                outfile.write(f"{c['x_p']} {c['x_p']} {c['x']} {c['y']} {c['z']} #{cn}\n")
+                outfile.write(f"{c['x']} {c['y']} {c['z']} #{cn}\n")
             
         
 
