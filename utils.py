@@ -195,7 +195,7 @@ adjust_rssi_params = -100, math.e, 2.63
 def adjust_rssi(rssi_in): 
     min_rssi, exponent, scaler = adjust_rssi_params  
     rss_out = np.array([])
-    if (type(rssi_in) is int) or (type(rssi_in) is float) or (type(rssi_in) is np.float64):
+    if (type(rssi_in) is int) or (type(rssi_in) is float) or (type(rssi_in) is np.float64) or (type(rssi_in) is numpy.int64):
         rssi_in = np.array([rssi_in])
     if type(rssi_in) is list:    
         rssi_in = np.array(rssi_in)
