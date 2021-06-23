@@ -522,3 +522,10 @@ def laloal_to_ecef(lat, lon, alt): # returns x y z (meters)
     return transformer.transform(lat, lon, alt)
 
 
+def collections_merge(collection1, collection2):
+    for ap1 in collection1['fingerprints'][0]['wifi']:
+        for ap2 in collection2['fingerprints'][0]['wifi']:
+            if (ap1 == ap2):
+                collection1['fingerprints'][0]['wifi'][ap1]["rssi"] = collection1['fingerprints'][0]['wifi'][ap1]["rssi"] + collection2['fingerprints'][0]['wifi'][ap2]["rssi"]
+            
+    return collection1
