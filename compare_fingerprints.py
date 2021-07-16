@@ -24,7 +24,7 @@ def precalculate_fingerprints(c): # c is a collection
         ufingerprint["wifirssi"][mac] = \
             np.average(adjust_rssi(ufingerprint["wifirssi"][mac])) #each fingerprint (direction) counts the same
     c['ufingerprint'] = ufingerprint
-                
+
 def merge_wifi_fingerprints(flist):
     if len(flist) == 1:
         return flist[0]
@@ -126,3 +126,28 @@ def compare_fingerprints(c1, c2, simil_method = braycurtis,  selection = 'Averag
         nap = nap + 1
         
     return simil_method(rssi1, rssi2)
+
+
+def find_most_similar_location(collections, collection, no = 1):
+    simil = []
+    for c in range(0, len(collections), 1):
+        if collections[c] == collection:
+            continue
+        simil.append((c,(compare_fingerprints(collections[c], collection))))
+
+    simil.sort(key = lambda x: x[1])
+    return [v[0] for v in simil[0:no]]
+
+def find_furtherest_2_locations(collections, i_collections):
+    result = []
+    max_distance = 0
+    for c1 in i_collections:
+        for c2 in i_collections:
+            dist = euclidean([collections[c1]['x'], collections[c1]['y'], collections[c1]['z']], [collections[c2]['x'], collections[c2]['y'], collections[c2]['z']])
+            if dist > max_distance:
+                result = [c1, c2]
+
+
+    return result
+
+
