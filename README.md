@@ -42,3 +42,4 @@ The `similarity_upb.py` script:
     similarity_collection_vs_all(json_file, collections, index = 0, method = 'Average'))
 
     Returns the closest neighbors that have the similarity under **0.1**.
+Sat May 14 07:31:21 PM EEST 2022
